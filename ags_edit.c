@@ -35,6 +35,10 @@ void ags_edit_gl_area_init_shaders(const char *vertex_path,
 void ags_edit_gl_area_realize(GtkWidget *widget);
 void ags_edit_gl_area_unrealize(GtkWidget *widget);
 
+gboolean ags_edit_delete_event_callback(GtkWidget *widget,
+					GdkEvent *event,
+					gpointer user_data);
+
 gboolean ags_edit_render_callback(GtkGLArea *gl_area,
 				  GdkGLContext *gl_context,
 				  AgsEdit *edit);
@@ -146,6 +150,9 @@ ags_edit_init(AgsEdit *edit)
 		     TRUE, TRUE,
 		     0);
 
+  g_signal_connect_after(edit, "delete-event",
+			 G_CALLBACK(ags_edit_delete_event_callback), NULL);
+  
   g_signal_connect(edit->gl_area_0, "realize",
 		   G_CALLBACK(ags_edit_gl_area_realize), NULL);
 
@@ -346,6 +353,14 @@ ags_edit_gl_area_unrealize(GtkWidget *widget)
 
   glDeleteVertexArrays(1, &gl_area_1_vertex_arrays);
   glDeleteProgram(gl_area_1_program);
+}
+
+gboolean
+ags_edit_delete_event_callback(GtkWidget *widget,
+			       GdkEvent *event,
+			       gpointer user_data)
+{
+  gtk_main_quit();
 }
 
 gboolean
