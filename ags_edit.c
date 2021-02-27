@@ -313,16 +313,16 @@ ags_edit_gl_area_realize(GtkWidget *widget)
   fragment_path = NULL;
   
   if(widget == gl_area_0){
-    vertex_path = "/home/joelkraehemann/opengl/ags_edit_gl_area_0_vertex_shader.glsl";
-    fragment_path = "/home/joelkraehemann/opengl/ags_edit_gl_area_0_fragment_shader.glsl";
+    vertex_path = "./ags_edit_gl_area_0_vertex_shader.glsl";
+    fragment_path = "./ags_edit_gl_area_0_fragment_shader.glsl";
 
     ags_edit_gl_area_init_shaders(vertex_path, fragment_path, &gl_area_0_program);
 
     glCreateVertexArrays(1, &gl_area_0_vertex_arrays);
     glBindVertexArray(gl_area_0_vertex_arrays);
   }else if(widget == gl_area_1){
-    vertex_path = "/home/joelkraehemann/opengl/ags_edit_gl_area_1_vertex_shader.glsl";
-    fragment_path = "/home/joelkraehemann/opengl/ags_edit_gl_area_1_fragment_shader.glsl";
+    vertex_path = "./ags_edit_gl_area_1_vertex_shader.glsl";
+    fragment_path = "./ags_edit_gl_area_1_fragment_shader.glsl";
 
     ags_edit_gl_area_init_shaders(vertex_path, fragment_path, &gl_area_1_program);
 
@@ -341,10 +341,10 @@ ags_edit_gl_area_unrealize(GtkWidget *widget)
     return;
   }
 
-  glDeleteVertexArrays(1, gl_area_0_vertex_arrays);
+  glDeleteVertexArrays(1, &gl_area_0_vertex_arrays);
   glDeleteProgram(gl_area_0_program);
 
-  glDeleteVertexArrays(1, gl_area_1_vertex_arrays);
+  glDeleteVertexArrays(1, &gl_area_1_vertex_arrays);
   glDeleteProgram(gl_area_1_program);
 }
 
