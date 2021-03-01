@@ -471,6 +471,8 @@ ags_edit_render_callback(GtkGLArea *gl_area,
   
   static const GLfloat red[] = { 1.0, 0.0, 0.0, 1.0 };
   static const GLfloat blue[] = { 0.0, 0.0, 1.0, 1.0 };
+  static const GLfloat white[] = { 1.0, 1.0, 1.0, 1.0 };
+  static const GLfloat black[] = { 0.0, 0.0, 0.0, 1.0 };
 
   if(gtk_gl_area_get_error(gl_area) != NULL){
     return(FALSE);
