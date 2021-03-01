@@ -338,8 +338,8 @@ ags_edit_gl_area_init_shaders(const char *vertex_path,
 
   program = glCreateProgram();
   glAttachShader(program, vertex);
-  glAttachShader(program, control);
-  glAttachShader(program, evaluation);
+//  glAttachShader(program, control);
+//  glAttachShader(program, evaluation);
 //  glAttachShader(program, geometry);
   glAttachShader(program, fragment);
 
@@ -524,7 +524,7 @@ ags_edit_render_callback(GtkGLArea *gl_area,
   
   glPointSize(5.0f);
   
-  glDrawArrays(GL_PATCHES, 0, 3);
+  glDrawArrays(GL_TRIANGLES, 0, 3);
 
   /* We finished using the buffers and program */
 //  glUseProgram(0);
