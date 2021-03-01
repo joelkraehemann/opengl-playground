@@ -30,6 +30,8 @@ GLuint ags_edit_gl_area_create_shader(int type,
 				      const char *src);
 void ags_edit_gl_area_init_shaders(const char *vertex_path,
 				   const char *fragment_path,
+				   const char *control_path,
+				   const char *evaluation_path,
 				   GLuint *program_out);
 
 void ags_edit_gl_area_realize(GtkWidget *widget);
@@ -228,9 +230,11 @@ ags_edit_gl_area_create_shader(int type,
 void
 ags_edit_gl_area_init_shaders(const char *vertex_path,
 			      const char *fragment_path,
+			      const char *control_path,
+			      const char *evaluation_path,
 			      GLuint *program_out)
 {
-  GLuint vertex, fragment;
+  GLuint vertex, fragment, control, evaluation;
   GLuint program = 0;
   int status;
   GBytes *source;
@@ -238,7 +242,6 @@ ags_edit_gl_area_init_shaders(const char *vertex_path,
   source = g_mapped_file_get_bytes(g_mapped_file_new(vertex_path,
 						     FALSE,
 						     NULL));
-//  source = g_resources_lookup_data(vertex_path, 0, NULL);
   vertex = ags_edit_gl_area_create_shader(GL_VERTEX_SHADER, g_bytes_get_data(source, NULL));
   g_bytes_unref(source);
 
@@ -251,7 +254,6 @@ ags_edit_gl_area_init_shaders(const char *vertex_path,
   source = g_mapped_file_get_bytes(g_mapped_file_new(fragment_path,
 						     FALSE,
 						     NULL));
-//  source = g_resources_lookup_data(fragment_path, 0, NULL);
   fragment = ags_edit_gl_area_create_shader(GL_FRAGMENT_SHADER, g_bytes_get_data(source, NULL));
   g_bytes_unref(source);
 
@@ -262,8 +264,40 @@ ags_edit_gl_area_init_shaders(const char *vertex_path,
     return;
   }
 
+  source = g_mapped_file_get_bytes(g_mapped_file_new(control_path,
+						     FALSE,
+						     NULL));
+  control = ags_edit_gl_area_create_shader(GL_TESS_CONTROL_SHADER, g_bytes_get_data(source, NULL));
+  g_bytes_unref(source);
+
+  if(control == 0){
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
+    program_out[0] = 0;
+    
+    return;
+  }
+
+  source = g_mapped_file_get_bytes(g_mapped_file_new(evaluation_path,
+						     FALSE,
+						     NULL));
+  evaluation = ags_edit_gl_area_create_shader(GL_TESS_EVALUATION_SHADER, g_bytes_get_data(source, NULL));
+  g_bytes_unref(source);
+
+  if(evaluation == 0){
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
+    glDeleteShader(control);
+    program_out[0] = 0;
+    
+    return;
+  }
+
+
   program = glCreateProgram();
   glAttachShader(program, vertex);
+  glAttachShader(program, control);
+  glAttachShader(program, evaluation);
   glAttachShader(program, fragment);
 
   glLinkProgram(program);
@@ -291,10 +325,14 @@ ags_edit_gl_area_init_shaders(const char *vertex_path,
 
   glDetachShader(program, vertex);
   glDetachShader(program, fragment);
+  glDetachShader(program, control);
+  glDetachShader(program, evaluation);
 
 out:
   glDeleteShader(vertex);
   glDeleteShader(fragment);
+  glDeleteShader(control);
+  glDeleteShader(evaluation);
 
   if(program_out != NULL){
     program_out[0] = program;
@@ -307,6 +345,7 @@ ags_edit_gl_area_realize(GtkWidget *widget)
   GdkGLContext *context;
 
   char *vertex_path, *fragment_path;
+  char *control_path, *evaluation_path;
   
   gtk_gl_area_make_current(GTK_GL_AREA(widget));
 
@@ -322,16 +361,24 @@ ags_edit_gl_area_realize(GtkWidget *widget)
   if(widget == gl_area_0){
     vertex_path = "./ags_edit_gl_area_0_vertex_shader.glsl";
     fragment_path = "./ags_edit_gl_area_0_fragment_shader.glsl";
+    control_path = "./ags_edit_gl_area_0_control_shader.glsl";
+    evaluation_path = "./ags_edit_gl_area_0_evaluation_shader.glsl";
 
-    ags_edit_gl_area_init_shaders(vertex_path, fragment_path, &gl_area_0_program);
+    ags_edit_gl_area_init_shaders(vertex_path, fragment_path,
+				  control_path, evaluation_path,
+				  &gl_area_0_program);
 
     glCreateVertexArrays(1, &gl_area_0_vertex_arrays);
     glBindVertexArray(gl_area_0_vertex_arrays);
   }else if(widget == gl_area_1){
     vertex_path = "./ags_edit_gl_area_1_vertex_shader.glsl";
     fragment_path = "./ags_edit_gl_area_1_fragment_shader.glsl";
+    control_path = "./ags_edit_gl_area_1_control_shader.glsl";
+    evaluation_path = "./ags_edit_gl_area_1_evaluation_shader.glsl";
 
-    ags_edit_gl_area_init_shaders(vertex_path, fragment_path, &gl_area_1_program);
+    ags_edit_gl_area_init_shaders(vertex_path, fragment_path,
+				  control_path, evaluation_path,
+				  &gl_area_1_program);
 
     glCreateVertexArrays(1, &gl_area_1_vertex_arrays);
     glBindVertexArray(gl_area_1_vertex_arrays);
@@ -411,9 +458,21 @@ ags_edit_render_callback(GtkGLArea *gl_area,
     /* Use our shaders */
     glUseProgram(gl_area_1_program);
   }
+
+  GLfloat attrib[] = {
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+  };
+
+  glVertexAttrib4fv(0, attrib);
   
   /* Draw the three vertices as a triangle */
-  glDrawArrays(GL_TRIANGLES, 0, 3);
+  glPolygonMode(GL_FRONT_AND_BACK,
+		GL_LINE);
+  
+  glDrawArrays(GL_PATCHES, 0, 3);
 
   /* We finished using the buffers and program */
 //  glUseProgram(0);
@@ -439,7 +498,8 @@ ags_edit_render_timeout(AgsEdit *edit)
   gint64 current_time;
 
   current_time = g_get_monotonic_time();
-  
+
+#if 0
   if(last_configure > last_render_0){
     if(last_render_0 + (G_USEC_PER_SEC / 30) < current_time){
       gtk_gl_area_queue_render((GtkGLArea *) edit->gl_area_0);
@@ -451,7 +511,16 @@ ags_edit_render_timeout(AgsEdit *edit)
       gtk_gl_area_queue_render((GtkGLArea *) edit->gl_area_1);
     }
   }
+#elif 1
+  if(last_render_0 + (G_USEC_PER_SEC / 30) < current_time){
+    gtk_gl_area_queue_render((GtkGLArea *) edit->gl_area_0);
+  }
 
+  if(last_render_1 + (G_USEC_PER_SEC / 30) < current_time){
+    gtk_gl_area_queue_render((GtkGLArea *) edit->gl_area_1);
+  }
+#endif
+  
   return(G_SOURCE_CONTINUE);
 }
 
